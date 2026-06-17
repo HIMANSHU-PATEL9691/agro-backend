@@ -8,6 +8,10 @@ import jwt from "jsonwebtoken";
 
 export const registerUser = async (req, res) => {
   try {
+    return res.status(403).json({
+      message: "Registration is disabled. Please use the default admin credentials.",
+    });
+
     const { name, email, password } = req.body;
 
     // validation
@@ -64,7 +68,18 @@ export const loginUser = async (req, res) => {
 
     // check user
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
+
+    // Auto-create the default admin on first login attempt if it doesn't exist
+    if (!user && email === "admin" && password === "shreeji@55") {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      user = await User.create({
+        name: "Admin",
+        email: "admin",
+        password: hashedPassword,
+      });
+    }
 
     if (!user) {
       return res.status(400).json({
